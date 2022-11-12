@@ -9,16 +9,97 @@ class Parser(
 
     private var current = 0
 
-    fun parse(): Expr? {
-        return try {
-            expression()
-        } catch (error: ParseError) {
-            null
+    fun parse(): List<Stmt> {
+        val statements = mutableListOf<Stmt>()
+        while (!isAtEnd()) {
+            declaration()?.let {
+                statements.add(it)
+            }
         }
+
+        return statements
     }
 
     private fun expression(): Expr {
-        return equality()
+        return assignment()
+    }
+
+    private fun declaration(): Stmt? {
+        try {
+            if (match(VAR)) {
+                return varDeclaration()
+            }
+            return statement()
+        } catch (error: ParseError) {
+            synchronize()
+            return null
+        }
+    }
+
+    private fun statement(): Stmt {
+        if (match(PRINT)) {
+            return printStatement()
+        }
+        if (match(LEFT_BRACE)) {
+            return Stmt.Block(block())
+        }
+        return expressionStatement()
+    }
+
+    private fun printStatement(): Stmt {
+        val value = expression()
+        consume(SEMICOLON, "Expect ';' after value.")
+        return Stmt.Print(value)
+    }
+
+    private fun varDeclaration(): Stmt {
+        val name = consume(IDENTIFIER, "Expect variable name.")
+
+        val initializer = if (match(EQUAL)) {
+            expression()
+        } else {
+            null
+        }
+
+        consume(SEMICOLON, "Expect ';' after variable declaration.")
+        return Stmt.Var(name, initializer)
+    }
+
+    private fun expressionStatement(): Stmt {
+        val expr = expression()
+        consume(SEMICOLON, "Expect ';' after expression.")
+        return Stmt.Expression(expr)
+    }
+
+    private fun block(): List<Stmt> {
+        val statements = mutableListOf<Stmt>()
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            declaration()?.let {
+                statements.add(it)
+            }
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after block.")
+        return statements
+    }
+
+    private fun assignment(): Expr {
+        val expr = equality()
+
+        if (match(EQUAL)) {
+            val equals = previous()
+            val value = assignment()
+
+            if (expr is Expr.Variable) {
+                val name = expr.name
+                return Expr.Assign(name, value)
+            }
+
+            error(equals, "Invalid assignment target.")
+        }
+
+        return expr
     }
 
     private fun equality(): Expr {
@@ -92,6 +173,10 @@ class Parser(
 
         if (match(NUMBER, STRING)) {
             return Expr.Literal(previous().literal)
+        }
+
+        if (match(IDENTIFIER)) {
+            return Expr.Variable(previous())
         }
 
         if (match(LEFT_PAREN)) {

@@ -14,10 +14,22 @@ class GenerateAst {
             outputDir,
             "Expr",
             listOf(
+                "Assign   : Token name, Expr value",
                 "Binary   : Expr left, Token operator, Expr right",
                 "Grouping : Expr expression",
                 "Literal  : Any? value",
                 "Unary    : Token operator, Expr right",
+                "Variable : Token name",
+            )
+        )
+        defineAst(
+            outputDir,
+            "Stmt",
+            listOf(
+                "Block      : List<Stmt> statements",
+                "Expression : Expr expression",
+                "Print      : Expr expression",
+                "Var        : Token name, Expr? initializer",
             )
         )
     }
@@ -55,7 +67,7 @@ class GenerateAst {
             writer.println("        fun visit$typeName$baseName(${baseName.lowercase()}: $typeName): R")
         }
 
-        writer.println("  }")
+        writer.println("    }")
         writer.println()
     }
 
