@@ -26,6 +26,9 @@ class Lox {
         if (hadError) {
             exitProcess(65)
         }
+        if (hadRuntimeError) {
+            exitProcess(70)
+        }
     }
 
     private fun runPrompt() {
@@ -51,11 +54,13 @@ class Lox {
             return
         }
 
-        println(AstPrinter().print(expression!!))
+        interpreter.interpret(expression!!)
     }
 
     companion object {
+        val interpreter = Interpreter()
         var hadError = false
+        var hadRuntimeError = false
 
         fun error(line: Int, message: String) {
             report(line, "", message)
@@ -72,6 +77,11 @@ class Lox {
             } else {
                 report(token.line, " at '${token.lexeme}'", message)
             }
+        }
+
+        fun runtimeError(error: RuntimeError) {
+            System.err.println("${error.message}\n[line ${error.token.line}]")
+            hadRuntimeError = true
         }
     }
 }
